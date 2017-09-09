@@ -1,0 +1,87 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require File.join(File.dirname(__FILE__), 'vagrant-shell-scripts/vagrant')
+
+dir = File.dirname(File.expand_path(__FILE__))
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.require_version ">= 1.6.5"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+    config.vm.define "symfonybox" do |symfonybox|
+      symfonybox.vm.box = "bento/ubuntu-16.04"
+      symfonybox.vm.box_check_update = true
+      symfonybox.vm.synced_folder ".", "/vagrant", disabled: false
+
+      symfonybox.vm.provider :virtualbox do |vb|
+            vb.name = "symfonybox_ahaeusler_neustac188"
+            vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+            vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+      end
+
+      symfonybox.vm.hostname = "symfonybox.loc"
+      symfonybox.vm.network "private_network", ip: "192.168.56.205"
+      symfonybox.vm.network "forwarded_port", guest: 8000, host: 8000
+
+      if Vagrant.has_plugin?("vagrant-proxyconf")
+        symfonybox.proxy.http      = "http://http-proxy.intern.neusta.de:3128"
+        symfonybox.proxy.https     = "http://https-proxy.intern.neusta.de:3128"
+        symfonybox.proxy.no_proxy  = "localhost,127.0.0.1,.intern.neusta.de"
+        symfonybox.apt_proxy.http  = "http://http-proxy.intern.neusta.de:3128"
+        symfonybox.apt_proxy.https = "http://https-proxy.intern.neusta.de:3128"
+      end
+
+      symfonybox.ssh.forward_agent = true
+      symfonybox.ssh.insert_key = false
+      symfonybox.ssh.keep_alive = true
+
+      customKey  = "#{dir}/files/dot/ssh/id_rsa"
+      vagrantKey = "#{dir}/.vagrant/machines/default/private_key"
+
+      if File.file?(customKey)
+        symfonybox.ssh.private_key_path = [
+          customKey,
+          "#{dir}/files/dot/ssh/insecure_private_key"
+        ]
+
+        if File.file?(vagrantKey) and ! FileUtils.compare_file(customKey, vagrantKey)
+          File.delete(vagrantKey)
+        end
+
+        if ! File.directory?(File.dirname(vagrantKey))
+          FileUtils.mkdir_p(File.dirname(vagrantKey))
+        end
+
+        if ! File.file?(vagrantKey)
+          FileUtils.cp(customKey, vagrantKey)
+        end
+      end
+
+      # ssh (only first time)
+      config.vm.provision :shell do |shell|
+      vagrant_shell_scripts_configure(
+        shell,
+        File.dirname(__FILE__),
+        'files/shell/ssh-keygen.sh'
+       )
+      end
+
+      symfonybox.vm.provider "virtualbox" do |vm|
+        vm.memory = 2048
+        vm.cpus = 2
+      end
+
+      symfonybox.vm.provision "shell", path: "provision/env.sh"
+
+      config.vm.provision :shell do |shell|
+      vagrant_shell_scripts_configure(
+        shell,
+        File.dirname(__FILE__),
+        'provision/bootstrap.sh'
+       )
+      end
+    end
+end

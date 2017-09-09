@@ -1,0 +1,4 @@
+.vagrant
+.DS_Store
+id_rsa*
+root_id_rsa*
