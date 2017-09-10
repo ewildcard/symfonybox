@@ -8,7 +8,9 @@
     },
     "scripts": {
       "test": "echo \"Error: no test specified\" && exit 1",
-      "tsc": "tsc"
+      "postinstall": "typings install",
+      "tsc": "tsc",
+      "typings": "typings"
     },
     "author": "Alexander Häusler",
     "license": "ISC",
