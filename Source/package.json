@@ -7,9 +7,11 @@
       "test": "tests"
     },
     "scripts": {
+      "start": "tsc && concurrently \"npm run tsc:w\"",
       "test": "echo \"Error: no test specified\" && exit 1",
       "postinstall": "typings install",
       "tsc": "tsc",
+      "tsc:w": "tsc -w",
       "typings": "typings"
     },
     "author": "Alexander Häusler",
